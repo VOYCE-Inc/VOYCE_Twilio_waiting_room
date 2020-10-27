@@ -15,7 +15,9 @@
   <button id="Unmute-button" class="hidden">Unmute</button>
   <button id="Pause-button" >Pause</button>
   <button id="Unpause-button" class="hidden">Unpause</button>
-  <button id="find-interpreter-button">Find Interpreter</button>
+  <button id="find-interpreter-button">Add Interpreter</button>
+  <button id="finish-button" class="hidden">Finish Interpretation</button>
+
   <div class="status" style="display:none" id="request_status"></div>
   <div style="display:none" id="reqeust_estimation_time"></div>
 
@@ -34,6 +36,9 @@
 
     const findInterpreterButton = document.getElementById("find-interpreter-button");
     findInterpreterButton.addEventListener("click", findInterpter);
+
+    const finishButton = document.getElementById("finish-button");
+    finishButton.addEventListener("click", finishRequest);
 
     const Mutebutton = document.getElementById("Mute-button");
     Mutebutton.addEventListener("click", mute);

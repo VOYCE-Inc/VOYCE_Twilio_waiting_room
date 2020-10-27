@@ -3,6 +3,7 @@ const http = require("http");
 const express = require("express");
 const path = require("path");
 const app = express();
+const https = require('https');
 
 const AccessToken = require("twilio").jwt.AccessToken;
 const VideoGrant = AccessToken.VideoGrant;
@@ -11,6 +12,10 @@ const ROOM_NAME = "telemedicineAppointment";
 
 // Max. period that a Participant is allowed to be in a Room (currently 14400 seconds or 4 hours)
 const MAX_ALLOWED_SESSION_DURATION = 14400;
+app.use(express.urlencoded({ extended: true }))
+
+// Parse JSON bodies (as sent by API clients)
+app.use(express.json());
 
 const patientPath = path.join(__dirname, "./public/patient.html");
 app.use("/patient", express.static(patientPath));
@@ -51,14 +56,124 @@ app.get("/token", function (request, response) {
   });
 });
 
-app.get("/voyce_token", function (request, response) {
-  const identity = request.query.identity;
+app.post('/Request/New', function (request, response) {
+   // First read existing users.
+   console.log('Got body:', request.body);
+   let returnData = '';
+   const postData = request.body;
+   const voyce_token = process.env.VOYCE_TOKEN;
+   const options = {
+     hostname: 'www.voyceglobal.com',
+     path: '/APITwilio/Request/New',
+     port: 443,
+     method: 'POST',
+     headers: {
+       'Content-Type': 'application/json',
+       'VOYCEToken':voyce_token
+     }
+   }
+   const req = https.request(options, res => {
+     console.log(`statusCode: ${res.statusCode}`)
 
-  // return voyce_token
-  response.send({
-    voyce_token:process.env.VOYCE_TOKEN,
-  });
-});
+     res.on('data', d => {
+        returnData += d;
+     })
+
+     res.on('end', () => {
+       console.log("end")
+       response.json(JSON.parse(returnData));
+     })
+
+   });
+   req.on('error', error => {
+     response.json("Error:"+error.message);
+   })
+   req.write(JSON.stringify(postData))
+   req.end()
+
+})
+
+app.get('/Request/Status/:request_id', function (request, response) {
+   // First read existing users.
+   console.log('request id:', request.params.request_id);
+   let returnData = '';
+   const postData = request.body;
+   const voyce_token = process.env.VOYCE_TOKEN;
+   const options = {
+     hostname: 'www.voyceglobal.com',
+     path: '/APITwilio/Request/Status?RequestId='+request.params.request_id,
+     port: 443,
+     method: 'GET',
+     headers: {
+       'Content-Type': 'application/json',
+       'VOYCEToken':voyce_token
+     }
+   }
+   const req = https.request(options, res => {
+     console.log(`statusCode: ${res.statusCode}`)
+
+     res.on('data', d => {
+        returnData += d;
+     })
+
+     res.on('end', () => {
+       console.log("end")
+       try {
+         response.json(JSON.parse(returnData));
+       } catch (e) {
+         response.json(JSON.parse("{}"));
+       }
+     })
+
+   });
+   req.on('error', error => {
+     response.json("Error:"+error.message);
+   })
+   //req.write(JSON.stringify(postData))
+   req.end()
+
+})
+
+app.post('/Request/Finish/:request_id', function (request, response) {
+   // First read existing users.
+   console.log('request id:', request.params.request_id);
+   let returnData = '';
+   const postData = request.body;
+   const voyce_token = process.env.VOYCE_TOKEN;
+   const options = {
+     hostname: 'www.voyceglobal.com',
+     path: '/APITwilio/Request/Finish?RequestId='+request.params.request_id,
+     port: 443,
+     method: 'POST',
+     headers: {
+       'Content-Type': 'application/json',
+       'VOYCEToken':voyce_token
+     }
+   }
+   const req = https.request(options, res => {
+     console.log(`statusCode: ${res.statusCode}`)
+
+     res.on('data', d => {
+        returnData += d;
+     })
+
+     res.on('end', () => {
+       console.log("end")
+       try {
+         response.json(JSON.parse(returnData));
+       } catch (e) {
+         response.json(JSON.parse("{}"));
+       }
+     })
+
+   });
+   req.on('error', error => {
+     response.json("Error:"+error.message);
+   })
+   //req.write(JSON.stringify(postData))
+   req.end()
+
+})
 
 http.createServer(app).listen(1337, () => {
   console.log("express server listening on port 1337");

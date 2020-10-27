@@ -1,5 +1,4 @@
 let room;
-let voyce_token;
 let interpreter_token;
 let requestId;
 var timer;
@@ -94,11 +93,20 @@ const onLeaveButtonClick = (event) => {
   room.disconnect();
 
   toggleButtons();
+
+  if(requestId != null && requestId != ""){
+    finishRequest();
+  }
 };
 
 const toggleButtons = () => {
   document.getElementById("leave-button").classList.toggle("hidden");
   document.getElementById("join-button").classList.toggle("hidden");
+};
+
+const toggleFindButtons = () => {
+  document.getElementById("find-interpreter-button").classList.toggle("hidden");
+  document.getElementById("finish-button").classList.toggle("hidden");
 };
 
 
@@ -107,9 +115,6 @@ const findInterpter = async () => {
     alert("please join room first");
     return;
   }
-  const response = await fetch("/voyce_token");
-  const jsonResponse = await response.json();
-  voyce_token = jsonResponse.voyce_token;
   var postData = {
     "LanguageId": 44,// Spanish
     "SpecialtyOptionCodeId": 1,
@@ -125,15 +130,16 @@ const findInterpter = async () => {
   }
   $.ajax({
     type: "POST",
-    url: "https://www.voyceglobal.com/APITwilio/Request/New",
+    url: "/Request/New",
+    data: JSON.stringify(postData),
     headers: {
-        'VOYCEToken':voyce_token
+        'Content-Type': 'application/json'
     },
-    data: postData,
     success: function(result){
       if(result.Successful){
         //will get a request
         requestId = result.RequestId;
+        toggleFindButtons();
         statusPulling();
       }else{
         alert(result.Reason)
@@ -147,10 +153,7 @@ const statusPulling = () =>{
 
   $.ajax({
     type: "GET",
-    url: `https://www.voyceglobal.com/APITwilio/Request/Status?RequestId=${requestId}`,
-    headers: {
-        'VOYCEToken':voyce_token
-    },
+    url: `/Request/Status/${requestId}`,
     success: function(result){
       if(result.Successful){
         // update status
@@ -170,17 +173,22 @@ const statusPulling = () =>{
   });
 }
 
-const fnishRequest = (requestId) =>{// this call notice voyce that interpreter already leave!
+const finishRequest = () =>{// this call notice voyce that interpreter already leave!
   $.ajax({
     type: "POST",
-    url: `https://www.voyceglobal.com/APITwilio/Request/Finish?RequestId=${requestId}`,
-    headers: {
-        'VOYCEToken':voyce_token
-    },
-    data: postData,
+    url: `/Request/Finish/${requestId}`,
     success: function(result){
-      if(result.Successfl){
+      if(result.Successful){
         alert("request finished")
+        requestId = null;
+        clearTimeout(timer);
+        timer = null;
+        $("#request_status").hide();
+        $("#request_status").html("");
+        $("#reqeust_estimation_time").hide();
+        $("#reqeust_estimation_time").html("");
+        toggleFindButtons();
+        interpreter_token = null;
       }else{
         alert(result.Reason);
       }
