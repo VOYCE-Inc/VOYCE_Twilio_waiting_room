@@ -56,15 +56,15 @@ app.get("/token", function (request, response) {
   });
 });
 
-app.post('/Request/New', function (request, response) {
-   // First read existing users.
+//start an interpreation service API call to VOYCE
+app.post('/Request/InviteWithoutLangauge', function (request, response) {
    console.log('Got body:', request.body);
    let returnData = '';
    const postData = request.body;
    const voyce_token = process.env.VOYCE_TOKEN;
    const options = {
      hostname: 'www.voyceglobal.com',
-     path: '/APITwilio/Request/New',
+     path: '/APITwilio/Request/InviteWithoutLangauge',
      port: 443,
      method: 'POST',
      headers: {
@@ -73,8 +73,6 @@ app.post('/Request/New', function (request, response) {
      }
    }
    const req = https.request(options, res => {
-     console.log(`statusCode: ${res.statusCode}`)
-
      res.on('data', d => {
         returnData += d;
      })
@@ -93,15 +91,14 @@ app.post('/Request/New', function (request, response) {
 
 })
 
-app.get('/Request/Status/:request_id', function (request, response) {
-   // First read existing users.
-   console.log('request id:', request.params.request_id);
+//Status pulling API Call to VOYCE
+app.post('/Request/StatusByPreInviteToken', function (request, response) {
    let returnData = '';
-   const postData = request.body;
+
    const voyce_token = process.env.VOYCE_TOKEN;
    const options = {
      hostname: 'www.voyceglobal.com',
-     path: '/APITwilio/Request/Status?RequestId='+request.params.request_id,
+     path: '/APITwilio/Request/StatusByPreInviteToken?PreInviteToken='+request.body.Token,
      port: 443,
      method: 'GET',
      headers: {
@@ -117,7 +114,6 @@ app.get('/Request/Status/:request_id', function (request, response) {
      })
 
      res.on('end', () => {
-       console.log("end")
        try {
          response.json(JSON.parse(returnData));
        } catch (e) {
@@ -129,20 +125,19 @@ app.get('/Request/Status/:request_id', function (request, response) {
    req.on('error', error => {
      response.json("Error:"+error.message);
    })
-   //req.write(JSON.stringify(postData))
    req.end()
-
 })
 
-app.post('/Request/Finish/:request_id', function (request, response) {
+//Finish the interpretation service API Call to VOYCE
+app.post('/Request/FinishByPreInvite/:preInviteToken', function (request, response) {
    // First read existing users.
-   console.log('request id:', request.params.request_id);
+   console.log('PreInviteToken:', request.params.preInviteToken);
    let returnData = '';
    const postData = request.body;
    const voyce_token = process.env.VOYCE_TOKEN;
    const options = {
      hostname: 'www.voyceglobal.com',
-     path: '/APITwilio/Request/Finish?RequestId='+request.params.request_id,
+     path: '/APITwilio/Request/FinishByPreInvite?PreInviteToken='+request.params.preInviteToken,
      port: 443,
      method: 'POST',
      headers: {
@@ -151,30 +146,144 @@ app.post('/Request/Finish/:request_id', function (request, response) {
      }
    }
    const req = https.request(options, res => {
-     console.log(`statusCode: ${res.statusCode}`)
-
      res.on('data', d => {
         returnData += d;
      })
 
      res.on('end', () => {
-       console.log("end")
        try {
          response.json(JSON.parse(returnData));
        } catch (e) {
          response.json(JSON.parse("{}"));
        }
      })
-
    });
    req.on('error', error => {
      response.json("Error:"+error.message);
    })
-   //req.write(JSON.stringify(postData))
    req.end()
 
 })
-
-http.createServer(app).listen(1337, () => {
-  console.log("express server listening on port 1337");
-});
+//
+// app.post('/Request/New', function (request, response) {
+//    // First read existing users.
+//    console.log('Got body:', request.body);
+//    let returnData = '';
+//    const postData = request.body;
+//    const voyce_token = process.env.VOYCE_TOKEN;
+//    const options = {
+//      hostname: 'www.voyceglobal.com',
+//      path: '/APITwilio/Request/New',
+//      port: 443,
+//      method: 'POST',
+//      headers: {
+//        'Content-Type': 'application/json',
+//        'VOYCEToken':voyce_token
+//      }
+//    }
+//    const req = https.request(options, res => {
+//      console.log(`statusCode: ${res.statusCode}`)
+//
+//      res.on('data', d => {
+//         returnData += d;
+//      })
+//
+//      res.on('end', () => {
+//        console.log("end")
+//        response.json(JSON.parse(returnData));
+//      })
+//
+//    });
+//    req.on('error', error => {
+//      response.json("Error:"+error.message);
+//    })
+//    req.write(JSON.stringify(postData))
+//    req.end()
+//
+// })
+//
+// app.get('/Request/Status/:request_id', function (request, response) {
+//    // First read existing users.
+//    console.log('request id:', request.params.request_id);
+//    let returnData = '';
+//    const postData = request.body;
+//    const voyce_token = process.env.VOYCE_TOKEN;
+//    const options = {
+//      hostname: 'www.voyceglobal.com',
+//      path: '/APITwilio/Request/Status?RequestId='+request.params.request_id,
+//      port: 443,
+//      method: 'GET',
+//      headers: {
+//        'Content-Type': 'application/json',
+//        'VOYCEToken':voyce_token
+//      }
+//    }
+//    const req = https.request(options, res => {
+//      console.log(`statusCode: ${res.statusCode}`)
+//
+//      res.on('data', d => {
+//         returnData += d;
+//      })
+//
+//      res.on('end', () => {
+//        console.log("end")
+//        try {
+//          response.json(JSON.parse(returnData));
+//        } catch (e) {
+//          response.json(JSON.parse("{}"));
+//        }
+//      })
+//
+//    });
+//    req.on('error', error => {
+//      response.json("Error:"+error.message);
+//    })
+//    //req.write(JSON.stringify(postData))
+//    req.end()
+//
+// })
+//
+// app.post('/Request/Finish/:request_id', function (request, response) {
+//    // First read existing users.
+//    console.log('request id:', request.params.request_id);
+//    let returnData = '';
+//    const postData = request.body;
+//    const voyce_token = process.env.VOYCE_TOKEN;
+//    const options = {
+//      hostname: 'www.voyceglobal.com',
+//      path: '/APITwilio/Request/Finish?RequestId='+request.params.request_id,
+//      port: 443,
+//      method: 'POST',
+//      headers: {
+//        'Content-Type': 'application/json',
+//        'VOYCEToken':voyce_token
+//      }
+//    }
+//    const req = https.request(options, res => {
+//      console.log(`statusCode: ${res.statusCode}`)
+//
+//      res.on('data', d => {
+//         returnData += d;
+//      })
+//
+//      res.on('end', () => {
+//        console.log("end")
+//        try {
+//          response.json(JSON.parse(returnData));
+//        } catch (e) {
+//          response.json(JSON.parse("{}"));
+//        }
+//      })
+//
+//    });
+//    req.on('error', error => {
+//      response.json("Error:"+error.message);
+//    })
+//    //req.write(JSON.stringify(postData))
+//    req.end()
+//
+// })
+//
+// http.createServer(app).listen(1337, () => {
+//   console.log("express server listening on port 1337");
+// });

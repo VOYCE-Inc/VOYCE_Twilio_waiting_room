@@ -1,14 +1,15 @@
 let room;
 let interpreter_token;
 let requestId;
+let preInviteToken;
+let url;
+let child;
 var timer;
 const joinRoom = async (event, identity) => {
   const response = await fetch(`/token?identity=${identity}`);
   const jsonResponse = await response.json();
   const token = jsonResponse.token;
-
   const Video = Twilio.Video;
-
   const localTracks = await Video.createLocalTracks({
     audio: true,
     video: { width: 640 },
@@ -39,16 +40,9 @@ const joinRoom = async (event, identity) => {
   room.on("participantDisconnected", onParticipantDisconnected);
 
   toggleButtons();
-
   await generatorInterpreterToken("interpreter");
   event.preventDefault();
 };
-
-const generatorInterpreterToken = async (identity) => {
-  const response = await fetch(`/token?identity=${identity}`);
-  const jsonResponse = await response.json();
-  interpreter_token = jsonResponse.token;
-}
 
 // when a participant disconnects, remove their video and audio from the DOM.
 const onParticipantDisconnected = (participant) => {
@@ -56,6 +50,7 @@ const onParticipantDisconnected = (participant) => {
   participantDiv.parentNode.removeChild(participantDiv);
 };
 
+// when a participant connected, add their tracks
 const onParticipantConnected = (participant) => {
   const participantDiv = document.createElement("div");
   participantDiv.id = participant.sid;
@@ -81,6 +76,7 @@ const onParticipantConnected = (participant) => {
   participant.on("trackUnsubscribed", trackUnsubscribed);
 };
 
+//leave the room
 const onLeaveButtonClick = (event) => {
   room.localParticipant.tracks.forEach((publication) => {
     const track = publication.track;
@@ -99,27 +95,34 @@ const onLeaveButtonClick = (event) => {
   }
 };
 
+//hide leave/join buttons
 const toggleButtons = () => {
   document.getElementById("leave-button").classList.toggle("hidden");
   document.getElementById("join-button").classList.toggle("hidden");
 };
 
+//hide/show voyce interpretation buttons
 const toggleFindButtons = () => {
   document.getElementById("find-interpreter-button").classList.toggle("hidden");
   document.getElementById("finish-button").classList.toggle("hidden");
 };
 
+//Generate a twilio video token for the interpreter and send to VOYCE's server
+const generatorInterpreterToken = async (identity) => {
+  const response = await fetch(`/token?identity=${identity}`);
+  const jsonResponse = await response.json();
+  interpreter_token = jsonResponse.token;
+}
 
+//initialize interpretation service using Voyce API
 const findInterpter = async () => {
   if(interpreter_token == "" || interpreter_token == null){
+    //If the room doesn't exist, do not join.
     alert("please join room first");
     return;
   }
+  //Post data including the information of the interpretation service and twilio related info
   var postData = {
-    "LanguageId": 44,// Spanish
-    "SpecialtyOptionCodeId": 1,
-    "VideoOptionCodeId": 1,
-    "GenderOptionCodeId": 1,
     "Note": "Test Note",
     "ReferenceId": "",
     "isVideo": true,
@@ -128,18 +131,24 @@ const findInterpter = async () => {
       "RoomName": "telemedicineAppointment"
     }
   }
+  //Create ajax API call to Voyce Server
   $.ajax({
     type: "POST",
-    url: "/Request/New",
+    url: "/Request/InviteWithoutLangauge",
     data: JSON.stringify(postData),
     headers: {
         'Content-Type': 'application/json'
     },
     success: function(result){
       if(result.Successful){
-        //will get a request
-        requestId = result.RequestId;
+        //VOYCE response data including PreInviteToken, URL.
+        preInviteToken = result.PreInviteToken;
+        url = result.URL;
+        //Open the URL using a new window.
+        child = window.open(url, '_blank', 'location=yes,height=570,width=1024,scrollbars=yes,status=yes');
+        //hide/show voyce interpretation buttons
         toggleFindButtons();
+        //Create a thread to pull status information about the service just sent.
         statusPulling();
       }else{
         alert(result.Reason)
@@ -149,19 +158,28 @@ const findInterpter = async () => {
   });
 }
 
+//Create a thread to pull status information about the service just sent.
 const statusPulling = () =>{
-
+  var postData = {
+    "Token":preInviteToken
+  }
   $.ajax({
-    type: "GET",
-    url: `/Request/Status/${requestId}`,
+    type: "POST",
+    url: `/Request/StatusByPreInviteToken`,
+    data: JSON.stringify(postData),
+    headers: {
+        'Content-Type': 'application/json'
+    },
     success: function(result){
       if(result.Successful){
-        // update status
-        // update estimation time
+        // update status/estimation time
         $("#request_status").show();
         $("#request_status").html("Request Status: "+result.Status);
         $("#reqeust_estimation_time").show();
         $("#reqeust_estimation_time").html(result.EstimationTimeString);
+        if(result.StatusCodeId >= 2){
+          child.close();
+        }
       }
     },
     complete:function(){
@@ -173,10 +191,11 @@ const statusPulling = () =>{
   });
 }
 
-const finishRequest = () =>{// this call notice voyce that interpreter already leave!
+//Finish the interpretation service if no longer needed.
+const finishRequest = () =>{
   $.ajax({
     type: "POST",
-    url: `/Request/Finish/${requestId}`,
+    url: `/Request/FinishByPreInvite/${preInviteToken}`,
     success: function(result){
       if(result.Successful){
         alert("request finished")
@@ -197,16 +216,19 @@ const finishRequest = () =>{// this call notice voyce that interpreter already l
   });
 }
 
+//switch mute/unmute button UI
 const toggleMuteButtons = () => {
     document.getElementById("Mute-button").classList.toggle("hidden");
     document.getElementById("Unmute-button").classList.toggle("hidden");
 };
 
+//switch pause/resume button UI
 const togglePauseButtons = () => {
     document.getElementById("Pause-button").classList.toggle("hidden");
     document.getElementById("Unpause-button").classList.toggle("hidden");
 };
 
+//mute the microphone
 const mute = () => {
     var localParticipant = room.localParticipant;
     localParticipant.audioTracks.forEach(function (audioTrack) {
@@ -215,6 +237,7 @@ const mute = () => {
     toggleMuteButtons();
 }
 
+//unmute the microphone
 const unmute = () => {
     var localParticipant = room.localParticipant;
     localParticipant.audioTracks.forEach(function (audioTrack) {
@@ -224,7 +247,7 @@ const unmute = () => {
 
 }
 
-
+//pause the video camera
 const pause = () => {
     var localParticipant = room.localParticipant;
     localParticipant.videoTracks.forEach(function (videoTrack) {
@@ -233,6 +256,7 @@ const pause = () => {
     togglePauseButtons();
 }
 
+//resume the video camera
 const unpause = () => {
     var localParticipant = room.localParticipant;
     localParticipant.videoTracks.forEach(function (videoTrack) {
