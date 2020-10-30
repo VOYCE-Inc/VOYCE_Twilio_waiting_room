@@ -56,6 +56,10 @@ app.get("/token", function (request, response) {
   });
 });
 
+http.createServer(app).listen(1337, () => {
+ console.log("express server listening on port 1337");
+});
+
 //start an interpreation service API call to VOYCE
 app.post('/Request/InviteWithoutLangauge', function (request, response) {
    console.log('Got body:', request.body);
@@ -283,7 +287,3 @@ app.post('/Request/FinishByPreInvite/:preInviteToken', function (request, respon
 //    req.end()
 //
 // })
-//
-// http.createServer(app).listen(1337, () => {
-//   console.log("express server listening on port 1337");
-// });
